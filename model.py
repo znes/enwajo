@@ -97,6 +97,7 @@ def level_bounds(m, t, s):
     """
     return (0, storage.at[s, "l_nom"])
 
+
 # storage level variable
 m.s_level = Var(m.TIMESTEPS, m.STOR, bounds=level_bounds)
 
@@ -108,7 +109,8 @@ for t in m.TIMESTEPS:
     for r in m.RENEW:
         m.p[t, r].value = (
             renewable.at[r, "p_nom"]
-            * profiles.at[t, renewable.at[r, "profile"]] * dt
+            * profiles.at[t, renewable.at[r, "profile"]]
+            * dt
         )
         m.p[t, r].fix()
 
@@ -121,15 +123,18 @@ def opex(m, u):
     function.
     """
     if u in m.CONV:
-        opex = sum(
-            (
-                m.p[t, u]
-                / units.at[u, "eta"]
-                * carrier.at[units.at[u, "carrier"], "cost"]
+        opex = (
+            sum(
+                (
+                    m.p[t, u]
+                    / units.at[u, "eta"]
+                    * carrier.at[units.at[u, "carrier"], "cost"]
+                )
+                + units.at[u, "vom"]
+                for t in m.TIMESTEPS
             )
-            + units.at[u, "vom"]
-            for t in m.TIMESTEPS
-        ) * dt
+            * dt
+        )
     if u in m.STOR:
         opex = sum(storage.at[u, "vom"] for t in m.TIMESTEPS) * dt
     if u in m.RENEW:
@@ -170,6 +175,7 @@ def electricity_balance(m, t):
     )
     return lhs == rhs
 
+
 # constraint for electricity balance
 m.electricity_balance = Constraint(m.TIMESTEPS, rule=electricity_balance)
 
@@ -200,7 +206,7 @@ def storage_balance(m, t, s):
     else:
         return (
             m.s_level[t, s]
-            == m.s_level[t - 1, s]
+            == m.s_level[t - 1 * dt, s]
             + storage.at[s, "eta_in"] * m.s_in[t, s] * dt
             - m.s_out[t, s] / storage.at[s, "eta_out"] * dt
         )
@@ -224,9 +230,11 @@ meta_results = opt.solve(m, tee=True)
 results_data = {i.name: i.get_values() for i in m.component_objects(Var)}
 
 # store results in dataframe
-supply = pd.Series(results_data["p"]).unstack()
-supply = pd.concat(
-    [supply, pd.Series(results_data["s_out"]).unstack()], axis=1, sort=False
+supply_results = pd.Series(results_data["p"]).unstack()
+supply_results = pd.concat(
+    [supply_results, pd.Series(results_data["s_out"]).unstack()],
+    axis=1,
+    sort=False,
 )
 
 filling_levels = pd.Series(results_data["s_level"]).unstack()
@@ -235,7 +243,7 @@ demand_results = pd.Series(results_data["s_in"]).unstack()
 
 demand_results["demand"] = (
     demand.at["demand", "amount"] * profiles[demand.at["demand", "profile"]]
-).values[config["model"]["t_start"] : config["model"]["t_end"]]
+).values[config["model"]["t_start"] : config["model"]["t_end"]][::dt]
 
 cost = pd.DataFrame.from_dict(
     {k: v() for k, v in m.opex.items()}, orient="index"
@@ -245,6 +253,6 @@ cost = pd.DataFrame.from_dict(
 if not os.path.exists("results"):
     os.makedirs("results")
 filling_levels.to_csv("results/filling_levels.csv")
-supply.to_csv("results/supply.csv")
-demand.to_csv("results/demand.csv")
+supply_results.to_csv("results/supply.csv")
+demand_results.to_csv("results/demand.csv")
 cost.to_csv("results/cost.csv")
