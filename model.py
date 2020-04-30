@@ -3,144 +3,217 @@
 
 """
 import os
+import toml
+
 import pandas as pd
 
 from pyomo.environ import (
-    ConcreteModel, Param, Set, Var, Objective, Constraint, minimize,
-    NonNegativeReals, Binary
+    ConcreteModel,
+    Set,
+    Var,
+    Objective,
+    Constraint,
+    minimize,
+    NonNegativeReals,
+    Expression,
+    Binary,
 )
 from pyomo.opt import SolverFactory
 
-input_data = "data-input.xlsx"
+with open("config.toml") as config_data:
+    config = toml.load(config_data)
+
+input_data = "input-data.xlsx"
+
 
 # %% DATA
-conventionals = pd.read_excel(
-    input_data, sheet_name="conventionals", index_col=[0]
+conventional = pd.read_excel(
+    input_data, sheet_name="conventional", index_col=[0]
 )
 
-storages = pd.read_excel(
-    input_data, sheet_name="storage", index_col=[0]
-)
+storage = pd.read_excel(input_data, sheet_name="storage", index_col=[0])
 
-renewables = pd.read_excel(
-    input_data, sheet_name="renewables", index_col=[0]
-)
+renewable = pd.read_excel(input_data, sheet_name="renewable", index_col=[0])
 
-demands = pd.read_excel(
-    input_data, sheet_name="demand", index_col=[0]
-)
+demand = pd.read_excel(input_data, sheet_name="demand", index_col=[0])
 
-profiles = pd.read_excel(
-    input_data, sheet_name="profiles", parse_dates=True
-)
+carrier = pd.read_excel(input_data, sheet_name="carrier", index_col=[0])
 
-units = pd.concat([conventionals, renewables, storages], sort=False)
+profiles = pd.read_excel(input_data, sheet_name="profiles", parse_dates=True)
 
-t_start = 0
-t_end = 168
+units = pd.concat([conventional, renewable, storage], sort=False)
+
+dt = int(config["model"]["t_resolution"])
 
 # %% MODEL
-m = ConcreteModel(name="power-model")
+m = ConcreteModel(name="enwajo")
 
 # %% SETS
-m.TIMESTEPS = Set(initialize=list(range(len(profiles)))[t_start: t_end],
-                  ordered=True)
-m.CONV = Set(initialize=conventionals.index)
-m.RENEW = Set(initialize=renewables.index)
-m.STORAGES = Set(initialize=storages.index)
-m.ALLUNITS = m.CONV | m.RENEW
+m.TIMESTEPS = Set(
+    initialize=list(range(len(profiles)))[
+        config["model"]["t_start"] : config["model"]["t_end"]
+    ][::dt],
+    ordered=True,
+)
+m.CONV = Set(initialize=conventional.index)
+m.RENEW = Set(initialize=renewable.index)
+m.STOR = Set(initialize=storage.index)
+m.ALL = m.CONV | m.RENEW
 
 
 # %% VARIABLES
 def p_bounds(m, t, u):
-    """ Bound of p variable for conventional units
+    """ Bound of supply variable p for conventional units
     """
-    return (0, units.at[u, "p_max"])
-m.p = Var(m.TIMESTEPS, m.ALLUNITS, bounds=p_bounds)
+    return (0, units.at[u, "p_nom"])
+
+
+# supply variable p of all units
+m.p = Var(m.TIMESTEPS, m.ALL, bounds=p_bounds)
+
 
 def s_out_bounds(m, t, s):
-    """ Bounds of storage outputs variable for storage units
+    """ Bounds of output variable for storage units
     """
-    return (0, storages.at[s, "p_max_out"])
-m.s_out = Var(m.TIMESTEPS, m.STORAGES, bounds=s_out_bounds)
+    return (0, storage.at[s, "p_nom_out"])
+
+
+# storage output variable
+m.s_out = Var(m.TIMESTEPS, m.STOR, bounds=s_out_bounds)
+
 
 def s_in_bounds(m, t, s):
-    return (0, storages.at[s, "p_max_in"])
-m.s_in = Var(m.TIMESTEPS, m.STORAGES, bounds=s_in_bounds)
+    """ Bounds of input variable for storage units
+    """
+    return (0, storage.at[s, "p_nom_in"])
+
+
+# storage input variable
+m.s_in = Var(m.TIMESTEPS, m.STOR, bounds=s_in_bounds)
+
 
 def level_bounds(m, t, s):
-    return (0, storages.at[s, "storage_capacity"])
-m.s_level = Var(m.TIMESTEPS, m.STORAGES, bounds=level_bounds)
+    """ Bounds of storage filling level variable
+    """
+    return (0, storage.at[s, "l_nom"])
+
+# storage level variable
+m.s_level = Var(m.TIMESTEPS, m.STOR, bounds=level_bounds)
 
 # auxiliary variable for balance constraint
 m.aux = Var(m.TIMESTEPS, ["excess", "shortage"], within=NonNegativeReals)
 
+# fix supply (p variable) of renewable energies units of the set "RENEW"
 for t in m.TIMESTEPS:
     for r in m.RENEW:
         m.p[t, r].value = (
-            renewables.at[r, "p_max"] *
-            profiles.at[t, renewables.at[r, "profile"]])
+            renewable.at[r, "p_nom"]
+            * profiles.at[t, renewable.at[r, "profile"]] * dt
+        )
         m.p[t, r].fix()
 
+# binary status variable to indicate whether unit is on / off for conv Units
 m.y = Var(m.TIMESTEPS, m.CONV, within=Binary)
+
+
+def opex(m, u):
+    """ Expression to collect operational expenditures used in objective
+    function.
+    """
+    if u in m.CONV:
+        opex = sum(
+            (
+                m.p[t, u]
+                / units.at[u, "eta"]
+                * carrier.at[units.at[u, "carrier"], "cost"]
+            )
+            + units.at[u, "vom"]
+            for t in m.TIMESTEPS
+        ) * dt
+    if u in m.STOR:
+        opex = sum(storage.at[u, "vom"] for t in m.TIMESTEPS) * dt
+    if u in m.RENEW:
+        opex = sum(renewable.at[u, "vom"] for t in m.TIMESTEPS) * dt
+
+    return opex
+
+
+m.opex = Expression(m.ALL | m.STOR, rule=opex)
 
 
 # %% OBJECTIVE
 def obj_rule(m):
-  expr  = 0
-  expr += sum(
-          m.p[t, u] * units.at[u, "marginal_cost"]
-          for t in m.TIMESTEPS
-          for u in m.ALLUNITS
-  )
-  expr += sum(m.aux[t, "shortage"] * 3000 for t in m.TIMESTEPS)
-  expr += sum(m.s_out[t, s] * storages.at[s, "vom"]
-              for t in m.TIMESTEPS for s in m.STORAGES)
-  return expr
+    """ Objective function of total cost
+    """
+    expr = 0
+    expr += sum(m.opex[u] for u in m.ALL | m.STOR)
+    expr += sum(m.aux[t, "shortage"] * 3000 * dt for t in m.TIMESTEPS)
+    return expr
+
+
 m.objective = Objective(sense=minimize, rule=obj_rule)
 
 
 # %% CONSTRAINTS
-def demand_rule(m, t):
+def electricity_balance(m, t):
+    """ Energy balance constraint
+    """
     lhs = 0
     lhs += sum(m.p[t, c] for c in m.CONV)
     lhs += sum(m.p[t, r] for r in m.RENEW)
     lhs += m.aux[t, "shortage"]
     lhs += -m.aux[t, "excess"]
-    lhs += sum(m.s_out[t, s]- m.s_in[t, s] for s in m.STORAGES)
-    rhs = (demands.at["demand", "amount"] *
-           profiles.at[t, demands.at["demand", "profile"]])
+    lhs += sum(m.s_out[t, s] - m.s_in[t, s] for s in m.STOR)
+    rhs = (
+        demand.at["demand", "amount"]
+        * profiles.at[t, demand.at["demand", "profile"]]
+    )
     return lhs == rhs
-m.demand_constr = Constraint(m.TIMESTEPS, rule=demand_rule)
+
+# constraint for electricity balance
+m.electricity_balance = Constraint(m.TIMESTEPS, rule=electricity_balance)
+
 
 def p_min_constraint(m, t, c):
-       return m.p[t, c] >= units.at[c, "p_min"] * units.at[c, "p_max"] * m.y[t, c]
-m.p_min_constraint = Constraint(m.TIMESTEPS, m.CONV, rule=p_min_constraint)
+    """ Minimal supply constraint of unit
+    """
+    expr = m.p[t, c] >= units.at[c, "p_min"] * units.at[c, "p_nom"] * m.y[t, c]
+    return expr
+
 
 def p_max_constraint(m, t, c):
-       return m.p[t, c] <= units.at[c, "p_max"] * m.y[t, c]
-m.p_max_constraint = Constraint(m.TIMESTEPS, m.CONV, rule=p_max_constraint)
+    """ Maximum supply constraint of unit (required for pmin to work)
+    """
+    return m.p[t, c] <= units.at[c, "p_max"] * units.at[c, "p_nom"] * m.y[t, c]
+
+
+if config["constraints"]["pmin"]:
+    m.p_min_constraint = Constraint(m.TIMESTEPS, m.CONV, rule=p_min_constraint)
+    m.p_max_constraint = Constraint(m.TIMESTEPS, m.CONV, rule=p_max_constraint)
 
 # storage balance
-def storage_balance (m, t, s):
+def storage_balance(m, t, s):
+    """ Storage balance, first and last timestep are linked
+    """
     if t == m.TIMESTEPS.first():
-       return m.s_level[t, s] == m.s_level[m.TIMESTEPS.last(), s]
+        return m.s_level[t, s] == m.s_level[m.TIMESTEPS.last(), s]
     else:
         return (
-            m.s_level[t, s] ==
-            m.s_level[t - 1, s] +
-            storages.at[s, "eta_in"] * m.s_in[t, s] -
-            m.s_out[t, s] / storages.at[s, "eta_out"]
+            m.s_level[t, s]
+            == m.s_level[t - 1, s]
+            + storage.at[s, "eta_in"] * m.s_in[t, s] * dt
+            - m.s_out[t, s] / storage.at[s, "eta_out"] * dt
         )
-m.storage_balance = Constraint(m.TIMESTEPS, m.STORAGES,
-                               rule=storage_balance)
+
+
+m.storage_balance = Constraint(m.TIMESTEPS, m.STOR, rule=storage_balance)
 
 
 # %% SOLVING
 # m.write('problem.lp', io_options={'symbolic_solver_labels':False})
 
 # set solver (can use other solver e.g. 'gurobi' if gurobi is installed)
-opt = SolverFactory('cbc')
+opt = SolverFactory(config["model"]["solver"])
 
 # solve model
 # tee=True streams solver standard output in console
@@ -148,20 +221,25 @@ meta_results = opt.solve(m, tee=True)
 
 
 # %% POSTPROCESSING
-results_data = {i.name: i.get_values()
-                for i in m.component_objects(Var)}
+results_data = {i.name: i.get_values() for i in m.component_objects(Var)}
 
 # store results in dataframe
 supply = pd.Series(results_data["p"]).unstack()
-supply = pd.concat([supply, pd.Series(results_data["s_out"]).unstack()],
-                   axis=1, sort=False)
+supply = pd.concat(
+    [supply, pd.Series(results_data["s_out"]).unstack()], axis=1, sort=False
+)
 
 filling_levels = pd.Series(results_data["s_level"]).unstack()
 
-demand = pd.Series(results_data["s_in"]).unstack()
-demand["demand"] = (
-        demands.at["demand", "amount"] *
-        profiles[demands.at["demand", "profile"]]).values[t_start: t_end]
+demand_results = pd.Series(results_data["s_in"]).unstack()
+
+demand_results["demand"] = (
+    demand.at["demand", "amount"] * profiles[demand.at["demand", "profile"]]
+).values[config["model"]["t_start"] : config["model"]["t_end"]]
+
+cost = pd.DataFrame.from_dict(
+    {k: v() for k, v in m.opex.items()}, orient="index"
+)
 
 # write to csv
 if not os.path.exists("results"):
@@ -169,24 +247,4 @@ if not os.path.exists("results"):
 filling_levels.to_csv("results/filling_levels.csv")
 supply.to_csv("results/supply.csv")
 demand.to_csv("results/demand.csv")
-# %% PLOTTING
-
-
-import matplotlib.pyplot as plt
-# sorted supply
-sorted_supply = pd.DataFrame(
-        {c: supply[c].sort_values().values for c in supply.columns})
-plt.figure()
-sorted_supply.plot(style="--", grid=True)
-plt.ylabel("Power")
-plt.xlabel("Hour")
-plt.savefig("results/sorted.pdf")
-
-# aggregated supply
-fig, ax = plt.subplots()
-aggr = supply.sum() / 1e6
-ax = aggr.plot(kind="bar")
-ax.set_title("Aggregated supply by technology in TWh")
-ax.set_ylabel("Energy in TWh")
-plt.xticks(rotation=45)
-plt.savefig("results/aggregated_supply.pdf")
+cost.to_csv("results/cost.csv")
