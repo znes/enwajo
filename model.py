@@ -20,8 +20,13 @@ from pyomo.environ import (
 )
 from pyomo.opt import SolverFactory
 
-with open("config.toml") as config_data:
+with open("model-config.toml") as config_data:
     config = toml.load(config_data)
+
+if config["constraints"]["eta_partial"] and not config["constraints"]["pmin"]:
+    raise ValueError(
+        "If you set `eta_partial`, you also need to set `p_min` in "
+        "the config.toml file.")
 
 input_data = "input-data.xlsx"
 
@@ -46,7 +51,9 @@ units = pd.concat([conventional, renewable, storage], sort=False)
 dt = int(config["model"]["t_resolution"])
 
 # %% MODEL
-m = ConcreteModel(name="enwajo")
+print("Building model...")
+
+m = ConcreteModel(name=config["name"])
 
 # %% SETS
 m.TIMESTEPS = Set(
@@ -71,6 +78,8 @@ def p_bounds(m, t, u):
 # supply variable p of all units
 m.p = Var(m.TIMESTEPS, m.ALL, bounds=p_bounds)
 
+# fuel variable for convential power plants
+m.h = Var(m.TIMESTEPS, m.CONV, within=NonNegativeReals)
 
 def s_out_bounds(m, t, s):
     """ Bounds of output variable for storage units
@@ -118,6 +127,17 @@ for t in m.TIMESTEPS:
 m.y = Var(m.TIMESTEPS, m.CONV, within=Binary)
 
 
+def fuel_consumption(m, t, u):
+    """
+    """
+    if config["constraints"]["eta_partial"]:
+        return m.h[t, u] == (m.y[t, u] * units.at[u, "a"] + m.p[t, u] * units.at[u, "b"]) * 0.2933 # Mbtu -> MWh
+    else:
+        return m.h[t, u] == m.p[t, u] / units.at[u, "eta"]
+
+
+m.fuel_consumption = Constraint(m.TIMESTEPS, m.CONV, rule=fuel_consumption)
+
 def opex(m, u):
     """ Expression to collect operational expenditures used in objective
     function.
@@ -126,8 +146,7 @@ def opex(m, u):
         opex = (
             sum(
                 (
-                    m.p[t, u]
-                    / units.at[u, "eta"]
+                    m.h[t, u]
                     * carrier.at[units.at[u, "carrier"], "cost"]
                 )
                 + units.at[u, "vom"]
@@ -214,19 +233,23 @@ def storage_balance(m, t, s):
 
 m.storage_balance = Constraint(m.TIMESTEPS, m.STOR, rule=storage_balance)
 
+if config["model"]["debug"]:
+    m.write(config["name"] + '.lp',
+    io_options={'symbolic_solver_labels':False})
 
 # %% SOLVING
-# m.write('problem.lp', io_options={'symbolic_solver_labels':False})
+print("Solving model...")
 
 # set solver (can use other solver e.g. 'gurobi' if gurobi is installed)
 opt = SolverFactory(config["model"]["solver"])
 
 # solve model
 # tee=True streams solver standard output in console
-meta_results = opt.solve(m, tee=True)
+meta_results = opt.solve(m, tee=config["model"]["tee"])
 
 
 # %% POSTPROCESSING
+print("Processing results...")
 results_data = {i.name: i.get_values() for i in m.component_objects(Var)}
 
 # store results in dataframe
@@ -236,6 +259,8 @@ supply_results = pd.concat(
     axis=1,
     sort=False,
 )
+
+fuel_results = pd.Series(results_data["h"]).unstack()
 
 filling_levels = pd.Series(results_data["s_level"]).unstack()
 
@@ -249,10 +274,23 @@ cost = pd.DataFrame.from_dict(
     {k: v() for k, v in m.opex.items()}, orient="index"
 )
 
-# write to csv
-if not os.path.exists("results"):
-    os.makedirs("results")
-filling_levels.to_csv("results/filling_levels.csv")
-supply_results.to_csv("results/supply.csv")
-demand_results.to_csv("results/demand.csv")
-cost.to_csv("results/cost.csv")
+#
+rdir = os.path.join("results", config["name"])
+# write results
+if not os.path.exists(rdir):
+    os.makedirs(rdir)
+
+meta_results.write(
+    filename=os.path.join(rdir, "model-stats.json"), format='json')
+
+filling_levels.to_csv(os.path.join(rdir, "filling-level.csv"))
+
+supply_results.to_csv(os.path.join(rdir, "supply.csv"))
+
+fuel_results.to_csv(os.path.join(rdir, "fuel-consumption"))
+
+demand_results.to_csv(os.path.join(rdir, "demand.csv"))
+
+cost.to_csv(os.path.join(rdir, "cost.csv"))
+
+print("Success! Results are stored in `{}`".format(rdir))
