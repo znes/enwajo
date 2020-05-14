@@ -10,13 +10,15 @@ t_resolution = 1
 # start timestep
 t_start = 0
 # end timestep
-t_end = 400
+t_end = 24
 # if debug mode is on
 debug = false
 # stream solver output to console
 tee = false
-# input data file
-input_data = "input-data.xlxs"
+# input data file(s)
+input = "input"
+# output files
+output = "output"
 
 [constraints]
 # binary constraints for minimal load of of units

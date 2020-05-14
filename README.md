@@ -35,17 +35,19 @@ solver, constraints and temporal parameters.
 Run the model from this directory by running:
 
 ```
-  python model.py
+  python model.py scenarios/enwajo
 ```
 
-Results will be written to a directory `results`. After optimisation you
-can run
+The first commandline argument provides the path to the scenario directory
+containing the input data. The following folder structure is required for this
+scenario directory: 
 
 ```
-  python plotting.py
+example-scenarios
+  |-- input/
+    |--input.xlxs
+  |--config.toml
 ```
-
-to generate plots that will be stored in the plots directory `plots`.
 
 ##  Mathematical model
 

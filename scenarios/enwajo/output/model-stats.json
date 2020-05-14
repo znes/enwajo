@@ -1,0 +1,43 @@
+{
+    "Problem": [
+        {
+            "Lower bound": 1576430.94625727,
+            "Name": "unknown",
+            "Number of binary variables": 336,
+            "Number of constraints": 719,
+            "Number of integer variables": 336,
+            "Number of nonzeros": 648,
+            "Number of objectives": 1,
+            "Number of variables": 765,
+            "Sense": "minimize",
+            "Upper bound": 1576430.94625727
+        }
+    ],
+    "Solution": [
+        {
+            "number of solutions": 0,
+            "number of solutions displayed": 0
+        }
+    ],
+    "Solver": [
+        {
+            "Error rc": 0,
+            "Statistics": {
+                "Black box": {
+                    "Number of iterations": 212
+                },
+                "Branch and bound": {
+                    "Number of bounded subproblems": 0,
+                    "Number of created subproblems": 0
+                }
+            },
+            "Status": "ok",
+            "System time": 0.61,
+            "Termination condition": "optimal",
+            "Termination message": "Model was solved to optimality (subject to tolerances), and an optimal solution is available.",
+            "Time": 0.6606779098510742,
+            "User time": -1.0,
+            "Wallclock time": 0.64
+        }
+    ]
+}
