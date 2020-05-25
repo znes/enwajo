@@ -40,7 +40,7 @@ Run the model from this directory by running:
 
 The first commandline argument provides the path to the scenario directory
 containing the input data. The following folder structure is required for this
-scenario directory: 
+scenario directory:
 
 ```
 example-scenarios
@@ -51,5 +51,11 @@ example-scenarios
 
 ##  Mathematical model
 
+The description of the mathematical equations can be found in the `docs/`
+directory. To generate the pdf file pandoc can be used:
+
+```
+  pandoc docs/model-description.md -t latex -o docs/model-description.pdf
+```
 
 ## Cite as
