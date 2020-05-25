@@ -113,11 +113,11 @@ def run(scenario="scenarios/enwajo"):
     def level_bounds(m, t, s):
         """ Bounds of storage filling level variable
         """
-        return (0, storage.at[s, "l_nom"])
+        return (0, storage.at[s, "e_nom"])
 
 
     # storage level variable
-    m.s_level = Var(m.TIMESTEPS, m.STOR, bounds=level_bounds)
+    m.e = Var(m.TIMESTEPS, m.STOR, bounds=level_bounds)
 
     # auxiliary variable for balance constraint
     m.aux = Var(m.TIMESTEPS, ["excess", "shortage"], within=NonNegativeReals)
@@ -166,9 +166,9 @@ def run(scenario="scenarios/enwajo"):
                 * dt
             )
         if u in m.STOR:
-            opex = sum(storage.at[u, "vom"] for t in m.TIMESTEPS) * dt
+            opex = sum(m.s_out[t,u] * storage.at[u, "vom"] for t in m.TIMESTEPS) * dt
         if u in m.RENEW:
-            opex = sum(renewable.at[u, "vom"] for t in m.TIMESTEPS) * dt
+            opex = sum(m.p[t, u] * renewable.at[u, "vom"] for t in m.TIMESTEPS) * dt
 
         return opex
 
@@ -232,11 +232,11 @@ def run(scenario="scenarios/enwajo"):
         """ Storage balance, first and last timestep are linked
         """
         if t == m.TIMESTEPS.first():
-            return m.s_level[t, s] == m.s_level[m.TIMESTEPS.last(), s]
+            return m.e[t, s] == m.e[m.TIMESTEPS.last(), s]
         else:
             return (
-                m.s_level[t, s]
-                == m.s_level[t - 1 * dt, s]
+                m.e[t, s]
+                == m.e[t - 1 * dt, s] * storage.at[s, "loss"]
                 + storage.at[s, "eta_in"] * m.s_in[t, s] * dt
                 - m.s_out[t, s] / storage.at[s, "eta_out"] * dt
             )
@@ -274,7 +274,7 @@ def run(scenario="scenarios/enwajo"):
 
     fuel_results = pd.Series(results_data["h"]).unstack()
 
-    filling_levels = pd.Series(results_data["s_level"]).unstack()
+    filling_levels = pd.Series(results_data["e"]).unstack()
 
     demand_results = pd.Series(results_data["s_in"]).unstack()
 
@@ -285,7 +285,9 @@ def run(scenario="scenarios/enwajo"):
     cost = pd.DataFrame.from_dict(
         {k: v() for k, v in m.opex.items()}, orient="index"
     )
-
+    cost.columns = ["Operational Cost"]
+    cost.index.name = "Unit"
+    
     rdir = os.path.join(scenario, config["model"]["output"])
     # write results
     if not os.path.exists(rdir):
