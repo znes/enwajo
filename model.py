@@ -23,7 +23,7 @@ from pyomo.opt import SolverFactory
 from plotting import create_plots
 
 
-def run(scenario="scenarios/enwajo"):
+def run(scenario="scenarios/test-scenario"):
     """
     """
     with open(os.path.join(scenario, "config.toml")) as config_data:
@@ -37,6 +37,21 @@ def run(scenario="scenarios/enwajo"):
 
     # set input data file
     input_data = os.path.join(scenario, config["model"]["input"], "input.xlsx")
+
+    # result dir
+    rdir = os.path.join(scenario, config["model"]["output"])
+    # write results
+    if not os.path.exists(rdir):
+        os.makedirs(rdir)
+    else:
+        user_input = (input(
+            "Output directory {} exists. Continue and overwrite "
+            "(y/[n]):".format(rdir)) or "n")
+
+        if user_input != "y":
+            print("Stopping process!")
+            sys.exit()
+
 
     print("Reading data from `{}`".format(input_data))
     # %% DATA
@@ -287,11 +302,7 @@ def run(scenario="scenarios/enwajo"):
     )
     cost.columns = ["Operational Cost"]
     cost.index.name = "Unit"
-    
-    rdir = os.path.join(scenario, config["model"]["output"])
-    # write results
-    if not os.path.exists(rdir):
-        os.makedirs(rdir)
+
 
     meta_results.write(
         filename=os.path.join(rdir, "model-stats.json"), format="json"
@@ -306,7 +317,7 @@ def run(scenario="scenarios/enwajo"):
     demand_results.to_csv(os.path.join(rdir, "demand.csv"))
 
     cost.to_csv(os.path.join(rdir, "cost.csv"))
-    print("Success! Results are stored in `{}`".format(rdir))
+    print("Success! Stored results in `{}`".format(rdir))
 
     # generate auto  plots based on results
     plots_dir = create_plots(rdir, config)
