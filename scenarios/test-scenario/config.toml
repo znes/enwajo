@@ -11,7 +11,7 @@ t_resolution = 1
 t_start = 0
 # end timestep
 t_end = 24
-# if debug mode is on
+# if debug mode is on (write lp-file)
 debug = false
 # stream solver output to console
 tee = false
@@ -22,13 +22,16 @@ output = "output"
 
 [constraints]
 # binary constraints for minimal load of of units
+# NOTE: you need to set `p_min` for the units
 pmin = true
 # efficiency is based on function with partial load losses
-#(requires p_min = true)
+# requires p_min = true AND a,b coefficients for part load efficiecy modelling
 eta_partial = true
 
 
 [colors]
+# valid color names can be found at
+# https://matplotlib.org/3.1.0/gallery/color/named_colors.html
 solar-pv = "lightyellow"
 wind-onshore = "skyblue"
 gas-ccgt = "lightgray"
