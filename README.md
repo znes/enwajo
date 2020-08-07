@@ -30,7 +30,7 @@ into your *enwajo* folder.
 Your folder structure should look like something like this now:
 
 ```
-enwajo
+enwajo/
   |-- docs/
   |-- scenarios/
     |-- test-scenario/
@@ -87,10 +87,10 @@ containing the input data. The following folder structure is required for this
 scenario directory:
 
 ```
-example-scenario
+example-scenario/
   |-- input/
-    |--input.xlxs
-  |--config.toml
+    |-- input.xlxs
+  |-- config.toml
 ```
 
 ##  Mathematical model
@@ -102,4 +102,3 @@ directory. To generate the pdf file pandoc can be used:
   pandoc docs/model-description.md -t latex -o docs/model-description.pdf
 ```
 
-## Cite as
