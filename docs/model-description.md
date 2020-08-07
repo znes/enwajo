@@ -1,3 +1,8 @@
+---
+papersize: a4
+geometry: margin=2.5cm    
+---
+
 
 # Model Description
 
