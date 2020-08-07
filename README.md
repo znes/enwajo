@@ -13,8 +13,7 @@
   - Use the standard installation option
   - At the end of the wizard, use the option to "Disable path length limit", if available
 - Open the Windows Command Prompt
-- Create a new folder called *enwajo*:
-    `mkdir enwajo`
+- Create a new folder called *enwajo*: `mkdir enwajo`
 - Enter that folder: `cd enwajo`
 - Install virtualenv (package for python): `pip install virtualenv`
 - Create a virtual environment for python in your enwajo folder: `virtualenv venv`
@@ -23,11 +22,32 @@
 
 #### Install model
 
-- Download Source Code as a zip file and unzip it into you *enwajo* folder from: https://github.com/znes/enwajo/releases
-- Go to the root folder of the new repository (where this README resides) with `cd`
-- Install necessary packages listed in requirements.txt (make sure to have your environemt activated): `pip install -r requirements.txt`
-- Download cbc-solver from http://ampl.com/dl/open/cbc/cbc-win64.zip and unzip in the rootfolder of the model repository (where this README resides)
-- Run the model file: `python model.py scenarios/test-scenario`
+Download Source Code as a zip file and unzip it into your *enwajo* folder from: https://github.com/znes/enwajo/releases
+
+Download cbc-solver from http://ampl.com/dl/open/cbc/cbc-win64.zip and unzip it
+into your *enwajo* folder.
+
+Your folder structure should look like something like this now:
+
+```
+enwajo
+  |-- docs/
+  |-- scenarios/
+    |-- test-scenario/
+  |-- venv/
+  |-- cbc.exe
+  |-- model.py
+  |-- plotting.py
+  |-- README.md
+  |-- requirements.txt
+```
+
+Install necessary packages listed in requirements.txt (make sure to have your environemt activated) and run the model with the test scenario:
+
+```
+pip install -r requirements.txt
+python model.py scenarios/test-scenario
+```
 
 ### Linux
 
