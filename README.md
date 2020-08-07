@@ -12,9 +12,9 @@
   - Make sure to enable option "Add Python 3.7 to PATH"
   - Use the standard installation option
   - At the end of the wizard, use the option to "Disable path length limit", if available
-
 - Open the Windows Command Prompt
-- Create a new folder called *enwajo*: `mkdir enwajo`
+- Create a new folder called *enwajo*:
+  `mkdir enwajo`
 - Enter that folder: `cd enwajo`
 - Install virtualenv (package for python): `pip install virtualenv`
 - Create a virtual environment for python in your enwajo folder: `virtualenv venv`
