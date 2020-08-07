@@ -1,3 +1,8 @@
+---
+papersize: a4
+geometry: margin=2.5cm    
+---
+
 
 # Modelling and Optimization with Python (Anaconda)
 
@@ -19,14 +24,14 @@ Python you need to install the Python3 interpreter on your computer.
 Make sure to download the latest version of Anaconda. Follow the link below to find
 easy installation instructions for windows:
 
-https://docs.anaconda.com/anaconda/install/windows/
+[https://docs.anaconda.com/anaconda/install/windows/](https://docs.anaconda.com/anaconda/install/windows/)
 
 You can confirm that Anaconda is installed and working with Anaconda Navigator or
 with the `conda` command in the command line. Using Windows, click `Start` and select Anaconda Navigator from the menu. If you prefer using a command line
 interface (CLI), you can use the `conda` command to verify the installation
 using Anaconda Prompt on Windows.
 
-![Find Navigator](/docs/images/conda.PNG)
+![Find Navigator](docs/images/conda.PNG)
 
 **Anaconda Navigator** is a desktop graphical user interface (GUI) included in the Anaconda
 distribution, which allows you to launch applications and easily manage conda packages,
@@ -34,7 +39,7 @@ environments, and channels without using command line commands.
 With the Navigator you can search for packages on Anaconda Cloud or
 in a local Anaconda Repository.
 
-![Conda Navigator](/docs/images/navi.PNG)
+![Conda Navigator](docs/images/navi.PNG)
 
 Although Anaconda can be managed from the Anaconda Navigator, it is highly
 recommended using the command line tool. Especially when installing a solver (see below)
@@ -54,7 +59,7 @@ you have to open your shell????:
 
 After following 1-2-3, the command line should show:
 
-![github](/docs/images/promrt.PNG)
+![github](docs/images/promrt.PNG)
 
 
 To create an environment (with the name *example*), write in the Anaconda prompt:
@@ -75,11 +80,11 @@ To deactivate use:
   conda deactivate
 ```
 
-![github](/docs/images/env.PNG)
+![github](docs/images/env.PNG)
 
 The example below shows how to activate and deactivate an environment (*example* environment).
 
-![github](/docs/images/example.PNG)
+![github](docs/images/example.PNG)
 
 ## Installing packages and solvers
 
@@ -112,7 +117,7 @@ One open source solver is the GLPK solver, which you can install with:
 ``conda install -c conda-forge glpk``
 
 
-![github](/docs/images/pyomo.PNG)
+![github](docs/images/pyomo.PNG)
 
 There are various commercial and open-source solvers that can be used.
 
@@ -139,7 +144,7 @@ which is just because the version within Anaconda is a few revisions behind.*
 
 
 ### Spyder
-![github](/docs/images/spyder.PNG)
+![github](docs/images/spyder.PNG)
 
 1.	In the Editor window you can open, read, run, write, edit, etc. your code.
 2.	In the upper right-hand you can chose between a help browser, a variable explorer or a file explorer. You can change which panels are visible and their layout within the window.
