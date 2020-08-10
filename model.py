@@ -174,6 +174,19 @@ def run(scenario="scenarios/test-scenario"):
 
     m.fuel_consumption = Constraint(m.TIMESTEPS, m.CONV, rule=fuel_consumption)
 
+    def emissions(m, u):
+        """ Expression to collect emissions.
+        """
+        emissions = sum(
+            m.h[t, u]
+            * dt
+            * carrier.at[units.at[u, "carrier"], "emission_factor"]
+            for t in m.TIMESTEPS
+        )
+        return emissions
+
+    m.emissions = Expression(m.CONV, rule=emissions)
+
     def opex(m, u):
         """ Expression to collect operational expenditures used in objective
         function.
@@ -343,6 +356,12 @@ def run(scenario="scenarios/test-scenario"):
     cost.columns = ["Operational Cost"]
     cost.index.name = "Unit"
 
+    emissions = pd.DataFrame.from_dict(
+        {k: v() for k, v in m.emissions.items()}, orient="index"
+    )
+    emissions.columns = ["Emissions (in t)"]
+    emissions.index.name = "Unit"
+
     meta_results.write(
         filename=os.path.join(rdir, "model-stats.json"), format="json"
     )
@@ -354,6 +373,8 @@ def run(scenario="scenarios/test-scenario"):
     fuel_results.to_csv(os.path.join(rdir, "fuel-consumption"))
 
     demand_results.to_csv(os.path.join(rdir, "demand.csv"))
+
+    emissions.to_csv(os.path.join(rdir, "emissions.csv"))
 
     cost.to_csv(os.path.join(rdir, "cost.csv"))
     print("Success! Stored results in `{}`".format(rdir))
