@@ -9,7 +9,7 @@ solver = "cbc"
 t_resolution = 1
 # start timestep
 t_start = 0
-# end timestep
+# end timestep (8760 for a whole year)
 t_end = 24
 # if debug mode is on (write lp-file)
 debug = false
