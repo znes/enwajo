@@ -29,7 +29,10 @@ def run(scenario="scenarios/test-scenario"):
     with open(os.path.join(scenario, "config.toml")) as config_data:
         config = toml.load(config_data)
 
-    if config["constraints"]["eta_partial"] and not config["constraints"]["pmin"]:
+    if (
+        config["constraints"]["eta_partial"]
+        and not config["constraints"]["pmin"]
+    ):
         raise ValueError(
             "If you set `eta_partial`, you also need to set `p_min` in "
             "the config.toml file."
@@ -58,17 +61,23 @@ def run(scenario="scenarios/test-scenario"):
 
     print("Reading data from `{}`".format(input_data))
     # %% DATA
-    conventional = pd.read_excel(input_data, sheet_name="conventional", index_col=[0])
+    conventional = pd.read_excel(
+        input_data, sheet_name="conventional", index_col=[0]
+    )
 
     storage = pd.read_excel(input_data, sheet_name="storage", index_col=[0])
 
-    renewable = pd.read_excel(input_data, sheet_name="renewable", index_col=[0])
+    renewable = pd.read_excel(
+        input_data, sheet_name="renewable", index_col=[0]
+    )
 
     demand = pd.read_excel(input_data, sheet_name="demand", index_col=[0])
 
     carrier = pd.read_excel(input_data, sheet_name="carrier", index_col=[0])
 
-    profiles = pd.read_excel(input_data, sheet_name="profiles", parse_dates=True)
+    profiles = pd.read_excel(
+        input_data, sheet_name="profiles", parse_dates=True
+    )
 
     units = pd.concat([conventional, renewable, storage], sort=False)
 
@@ -122,7 +131,13 @@ def run(scenario="scenarios/test-scenario"):
     def level_bounds(m, t, s):
         """ Bounds of storage filling level variable
         """
-        return (0, storage.at[s, "e_nom"])
+        if t == m.TIMESTEPS.first():
+            return (
+                storage.at[s, "e_nom"] * storage.at[s, "e_init"],
+                storage.at[s, "e_nom"] * storage.at[s, "e_init"],
+            )
+        else:
+            return (0, storage.at[s, "e_nom"])
 
     # storage level variable
     m.e = Var(m.TIMESTEPS, m.STOR, bounds=level_bounds)
@@ -149,7 +164,9 @@ def run(scenario="scenarios/test-scenario"):
         if config["constraints"]["eta_partial"]:
             return (
                 m.h[t, u]
-                == (m.y[t, u] * units.at[u, "a"] + m.p[t, u] * units.at[u, "b"])
+                == (
+                    m.y[t, u] * units.at[u, "a"] + m.p[t, u] * units.at[u, "b"]
+                )
                 * 0.2933
             )  # Mbtu -> MWh
         else:
@@ -171,9 +188,15 @@ def run(scenario="scenarios/test-scenario"):
                 * dt
             )
         if u in m.STOR:
-            opex = sum(m.s_out[t, u] * storage.at[u, "vom"] for t in m.TIMESTEPS) * dt
+            opex = (
+                sum(m.s_out[t, u] * storage.at[u, "vom"] for t in m.TIMESTEPS)
+                * dt
+            )
         if u in m.RENEW:
-            opex = sum(m.p[t, u] * renewable.at[u, "vom"] for t in m.TIMESTEPS) * dt
+            opex = (
+                sum(m.p[t, u] * renewable.at[u, "vom"] for t in m.TIMESTEPS)
+                * dt
+            )
 
         return opex
 
@@ -206,27 +229,33 @@ def run(scenario="scenarios/test-scenario"):
         )
         return lhs == rhs
 
-
     # constraint for electricity balance
     m.electricity_balance = Constraint(m.TIMESTEPS, rule=electricity_balance)
-
 
     def p_min_constraint(m, t, c):
         """ Minimal supply constraint of unit
         """
-        expr = m.p[t, c] >= units.at[c, "p_min"] * units.at[c, "p_nom"] * m.y[t, c]
+        expr = (
+            m.p[t, c]
+            >= units.at[c, "p_min"] * units.at[c, "p_nom"] * m.y[t, c]
+        )
         return expr
-
 
     def p_max_constraint(m, t, c):
         """ Maximum supply constraint of unit (required for pmin to work)
         """
-        return m.p[t, c] <= units.at[c, "p_max"] * units.at[c, "p_nom"] * m.y[t, c]
-
+        return (
+            m.p[t, c]
+            <= units.at[c, "p_max"] * units.at[c, "p_nom"] * m.y[t, c]
+        )
 
     if config["constraints"]["pmin"]:
-        m.p_min_constraint = Constraint(m.TIMESTEPS, m.CONV, rule=p_min_constraint)
-        m.p_max_constraint = Constraint(m.TIMESTEPS, m.CONV, rule=p_max_constraint)
+        m.p_min_constraint = Constraint(
+            m.TIMESTEPS, m.CONV, rule=p_min_constraint
+        )
+        m.p_max_constraint = Constraint(
+            m.TIMESTEPS, m.CONV, rule=p_max_constraint
+        )
 
     # storage balance
     def storage_balance(m, t, s):
@@ -237,7 +266,7 @@ def run(scenario="scenarios/test-scenario"):
         else:
             return (
                 m.e[t, s]
-                == m.e[t - 1 * dt, s] * storage.at[s, "loss"]
+                == m.e[t - 1, s] * (1 - storage.at[s, "loss"])
                 + storage.at[s, "eta_in"] * m.s_in[t, s] * dt
                 - m.s_out[t, s] / storage.at[s, "eta_out"] * dt
             )
@@ -291,20 +320,28 @@ def run(scenario="scenarios/test-scenario"):
                 )
             elif var in ["s_in"]:
                 demand_results = pd.concat(
-                    [demand_results, pd.Series(results_data["s_in"]).unstack()],
+                    [
+                        demand_results,
+                        pd.Series(results_data["s_in"]).unstack(),
+                    ],
                     axis=1,
                     sort=False,
                 )
 
     demand_results["demand"] = (
-        demand.at["demand", "amount"] * profiles[demand.at["demand", "profile"]]
+        demand.at["demand", "amount"]
+        * profiles[demand.at["demand", "profile"]]
     ).values[config["model"]["t_start"] : config["model"]["t_end"]][::dt]
 
-    cost = pd.DataFrame.from_dict({k: v() for k, v in m.opex.items()}, orient="index")
+    cost = pd.DataFrame.from_dict(
+        {k: v() for k, v in m.opex.items()}, orient="index"
+    )
     cost.columns = ["Operational Cost"]
     cost.index.name = "Unit"
 
-    meta_results.write(filename=os.path.join(rdir, "model-stats.json"), format="json")
+    meta_results.write(
+        filename=os.path.join(rdir, "model-stats.json"), format="json"
+    )
 
     filling_levels.to_csv(os.path.join(rdir, "filling-level.csv"))
 
