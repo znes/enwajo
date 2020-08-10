@@ -48,6 +48,7 @@ def hourly_plot(name, color_dict, lines=[], supply=[], demand=[]):
                 line=dict(width=3, color=color_dict.get(c)),
             )
         )
+
     for c in supply:
         if "excess" in c:
             pass
@@ -86,13 +87,17 @@ def create_plots(rdir, config):
 
     demand = pd.read_csv(os.path.join(rdir, "demand.csv"), index_col=[0])
 
+    if "phs" in demand.columns:
+        phs = demand["phs"].to_frame()
+    else:
+        phs = pd.DataFrame(index=demand.index)
     offline.plot(
         hourly_plot(
             name="test",
             color_dict=color_dict,
             supply=supply,
             lines=demand["demand"].to_frame(),
-            demand=demand["phs"].to_frame(),
+            demand=phs,
         ),
         filename=os.path.join(plots, "hourly-dispatch.html"),
         auto_open=False,

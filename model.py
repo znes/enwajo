@@ -44,20 +44,21 @@ def run(scenario="scenarios/test-scenario"):
     if not os.path.exists(rdir):
         os.makedirs(rdir)
     else:
-        user_input = (input(
-            "Output directory {} exists. Continue and overwrite "
-            "(y/[n]):".format(rdir)) or "n")
+        user_input = (
+            input(
+                "Output directory {} exists. Continue and overwrite "
+                "(y/[n]):".format(rdir)
+            )
+            or "n"
+        )
 
         if user_input != "y":
             print("Stopping process!")
             sys.exit()
 
-
     print("Reading data from `{}`".format(input_data))
     # %% DATA
-    conventional = pd.read_excel(
-        input_data, sheet_name="conventional", index_col=[0]
-    )
+    conventional = pd.read_excel(input_data, sheet_name="conventional", index_col=[0])
 
     storage = pd.read_excel(input_data, sheet_name="storage", index_col=[0])
 
@@ -90,13 +91,11 @@ def run(scenario="scenarios/test-scenario"):
     m.STOR = Set(initialize=storage.index)
     m.ALL = m.CONV | m.RENEW
 
-
     # %% VARIABLES
     def p_bounds(m, t, u):
         """ Bound of supply variable p for conventional units
         """
         return (0, units.at[u, "p_nom"])
-
 
     # supply variable p of all units
     m.p = Var(m.TIMESTEPS, m.ALL, bounds=p_bounds)
@@ -104,32 +103,26 @@ def run(scenario="scenarios/test-scenario"):
     # fuel variable for convential power plants
     m.h = Var(m.TIMESTEPS, m.CONV, within=NonNegativeReals)
 
-
     def s_out_bounds(m, t, s):
         """ Bounds of output variable for storage units
         """
         return (0, storage.at[s, "p_nom_out"])
 
-
     # storage output variable
     m.s_out = Var(m.TIMESTEPS, m.STOR, bounds=s_out_bounds)
-
 
     def s_in_bounds(m, t, s):
         """ Bounds of input variable for storage units
         """
         return (0, storage.at[s, "p_nom_in"])
 
-
     # storage input variable
     m.s_in = Var(m.TIMESTEPS, m.STOR, bounds=s_in_bounds)
-
 
     def level_bounds(m, t, s):
         """ Bounds of storage filling level variable
         """
         return (0, storage.at[s, "e_nom"])
-
 
     # storage level variable
     m.e = Var(m.TIMESTEPS, m.STOR, bounds=level_bounds)
@@ -150,7 +143,6 @@ def run(scenario="scenarios/test-scenario"):
     # binary status variable to indicate whether unit is on / off for conv Units
     m.y = Var(m.TIMESTEPS, m.CONV, within=Binary)
 
-
     def fuel_consumption(m, t, u):
         """
         """
@@ -163,9 +155,7 @@ def run(scenario="scenarios/test-scenario"):
         else:
             return m.h[t, u] == m.p[t, u] / units.at[u, "eta"]
 
-
     m.fuel_consumption = Constraint(m.TIMESTEPS, m.CONV, rule=fuel_consumption)
-
 
     def opex(m, u):
         """ Expression to collect operational expenditures used in objective
@@ -181,15 +171,13 @@ def run(scenario="scenarios/test-scenario"):
                 * dt
             )
         if u in m.STOR:
-            opex = sum(m.s_out[t,u] * storage.at[u, "vom"] for t in m.TIMESTEPS) * dt
+            opex = sum(m.s_out[t, u] * storage.at[u, "vom"] for t in m.TIMESTEPS) * dt
         if u in m.RENEW:
             opex = sum(m.p[t, u] * renewable.at[u, "vom"] for t in m.TIMESTEPS) * dt
 
         return opex
 
-
     m.opex = Expression(m.ALL | m.STOR, rule=opex)
-
 
     # %% OBJECTIVE
     def obj_rule(m):
@@ -200,9 +188,7 @@ def run(scenario="scenarios/test-scenario"):
         expr += sum(m.aux[t, "shortage"] * 3000 * dt for t in m.TIMESTEPS)
         return expr
 
-
     m.objective = Objective(sense=minimize, rule=obj_rule)
-
 
     # %% CONSTRAINTS
     def electricity_balance(m, t):
@@ -256,12 +242,12 @@ def run(scenario="scenarios/test-scenario"):
                 - m.s_out[t, s] / storage.at[s, "eta_out"] * dt
             )
 
-
     m.storage_balance = Constraint(m.TIMESTEPS, m.STOR, rule=storage_balance)
 
     if config["model"]["debug"]:
         m.write(
-            config["name"] + ".lp", io_options={"symbolic_solver_labels": False}
+            os.path.join(rdir, config["name"] + ".lp"),
+            io_options={"symbolic_solver_labels": True},
         )
 
     # %% SOLVING
@@ -274,39 +260,51 @@ def run(scenario="scenarios/test-scenario"):
     # tee=True streams solver standard output in console
     meta_results = opt.solve(m, tee=config["model"]["tee"])
 
-
     # %% POSTPROCESSING
     print("Processing results...")
     results_data = {i.name: i.get_values() for i in m.component_objects(Var)}
 
     # store results in dataframe
-    supply_results = pd.Series(results_data["p"]).unstack()
-    supply_results = pd.concat(
-        [supply_results, pd.Series(results_data["s_out"]).unstack()],
-        axis=1,
-        sort=False,
-    )
-
-    fuel_results = pd.Series(results_data["h"]).unstack()
-
-    filling_levels = pd.Series(results_data["e"]).unstack()
-
-    demand_results = pd.Series(results_data["s_in"]).unstack()
+    supply_results = pd.DataFrame()
+    fuel_results = pd.DataFrame()
+    filling_levels = pd.DataFrame()
+    demand_results = pd.DataFrame()
+    for var, val in results_data.items():
+        if bool(val):
+            if var in ["p", "s_out"]:
+                supply_results = pd.concat(
+                    [supply_results, pd.Series(results_data[var]).unstack()],
+                    axis=1,
+                    sort=False,
+                )
+            elif var in ["h"]:
+                fuel_results = pd.concat(
+                    [fuel_results, pd.Series(results_data["h"]).unstack()],
+                    axis=1,
+                    sort=False,
+                )
+            elif var == "e":
+                filling_levels = pd.concat(
+                    [filling_levels, pd.Series(results_data["e"]).unstack()],
+                    axis=1,
+                    sort=False,
+                )
+            elif var in ["s_in"]:
+                demand_results = pd.concat(
+                    [demand_results, pd.Series(results_data["s_in"]).unstack()],
+                    axis=1,
+                    sort=False,
+                )
 
     demand_results["demand"] = (
         demand.at["demand", "amount"] * profiles[demand.at["demand", "profile"]]
     ).values[config["model"]["t_start"] : config["model"]["t_end"]][::dt]
 
-    cost = pd.DataFrame.from_dict(
-        {k: v() for k, v in m.opex.items()}, orient="index"
-    )
+    cost = pd.DataFrame.from_dict({k: v() for k, v in m.opex.items()}, orient="index")
     cost.columns = ["Operational Cost"]
     cost.index.name = "Unit"
 
-
-    meta_results.write(
-        filename=os.path.join(rdir, "model-stats.json"), format="json"
-    )
+    meta_results.write(filename=os.path.join(rdir, "model-stats.json"), format="json")
 
     filling_levels.to_csv(os.path.join(rdir, "filling-level.csv"))
 
@@ -326,6 +324,7 @@ def run(scenario="scenarios/test-scenario"):
 
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) < 2:
         run()
     else:

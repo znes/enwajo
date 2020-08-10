@@ -23,11 +23,10 @@ output = "output"
 [constraints]
 # binary constraints for minimal load of of units
 # NOTE: you need to set `p_min` for the units
-pmin = true
+pmin = false
 # efficiency is based on function with partial load losses
 # requires p_min = true AND a,b coefficients for part load efficiecy modelling
-eta_partial = true
-
+eta_partial = false
 
 [colors]
 # valid color names can be found at
