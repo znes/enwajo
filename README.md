@@ -102,3 +102,13 @@ directory. To generate the pdf file pandoc can be used:
   pandoc docs/model-description.md -t latex -o docs/model-description.pdf
 ```
 
+Units within the model can be defined by the user. However, make sure that
+units are consistent. For example use:
+
+* MW (installed capacities)
+* MWh (energy related values like the demand)
+* $/MWh (carrier or variable cost).
+
+## Cite as
+
+Hilpert, S. & Wingenbach, C. & Dettner, F. (2020). EnWaJo - Energy Water Model Jordan (Version v0.1). https://github.com/znes/enwajo/releases/tag/v0.1
