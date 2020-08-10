@@ -327,6 +327,10 @@ def run(scenario="scenarios/test-scenario"):
                     axis=1,
                     sort=False,
                 )
+    # add shortage and excess
+    aux_df = pd.Series(results_data["aux"]).unstack()
+    supply_results["shortage"] = aux_df["shortage"]
+    demand_results["excess"] = aux_df["excess"]
 
     demand_results["demand"] = (
         demand.at["demand", "amount"]
