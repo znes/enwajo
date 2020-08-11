@@ -103,16 +103,35 @@ def create_plots(rdir, config):
         auto_open=False,
     )
 
-    # pie chart for supply 
+    # pie chart for supply
     supply = pd.read_csv(os.path.join(rdir, "supply.csv"), index_col=[0])
+    demand = pd.read_csv(os.path.join(rdir, "demand.csv"), index_col=[0])
     summary = supply.sum() / 1e6
     summary.name = "Energy"
-    ax = summary.plot(kind="pie", subplots=True, colors=[color_dict.get(c, "black") for c in summary.index])
-    plt.title(rdir.split("/")[1])
-    fig = ax[0].get_figure()
-    fig.savefig(os.path.join(rdir, "plots", "summary.pdf"))
+
+    ax = summary.plot(
+        kind="pie",
+        colors=[color_dict.get(c, "black") for c in summary.index],
+        title=rdir.split("/")[1],
+    )
+    plt.savefig(
+        os.path.join(rdir, "plots", "supply-share.pdf"), bbox_inches="tight",
+    )
+    plt.close()
+
+    bardata = pd.concat([demand.sum() * -1, supply.sum()], sort=False).divide(
+        1e6
+    )
+    ax = bardata.plot(kind="barh", title=rdir.split("/")[1])
+    ax.set_ylabel("Technologies")
+    ax.set_xlabel("Energy in TWh")
+    plt.savefig(
+        os.path.join(rdir, "plots", "summary-barplot.pdf"), bbox_inches="tight"
+    )
+    #
 
     return plots
+
 
 if __name__ == "__main__":
     import sys
