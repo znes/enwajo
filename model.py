@@ -376,6 +376,13 @@ def run(scenario="scenarios/test-scenario"):
 
     emissions.to_csv(os.path.join(rdir, "emissions.csv"))
 
+    summary = pd.concat([supply_results.sum(), demand_results.sum()])
+    summary.name = "Energy (in TWh)"
+    summary = summary.to_frame()
+    summary.index.name = "Unit"
+    summary = summary.divide(1e6)
+    summary.to_csv(os.path.join(rdir, "summary.csv"))
+
     cost.to_csv(os.path.join(rdir, "cost.csv"))
     print("Success! Stored results in `{}`".format(rdir))
 
