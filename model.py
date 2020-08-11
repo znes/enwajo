@@ -151,7 +151,6 @@ def run(scenario="scenarios/test-scenario"):
             m.p[t, r].value = (
                 renewable.at[r, "p_nom"]
                 * profiles.at[t, renewable.at[r, "profile"]]
-                * dt
             )
             m.p[t, r].fix()
 
@@ -341,8 +340,8 @@ def run(scenario="scenarios/test-scenario"):
                 )
     # add shortage and excess
     aux_df = pd.Series(results_data["aux"]).unstack()
-    supply_results["shortage"] = aux_df["shortage"] * dt
-    demand_results["excess"] = aux_df["excess"] * dt
+    supply_results["shortage"] = aux_df["shortage"]
+    demand_results["excess"] = aux_df["excess"] 
 
     demand_results["demand"] = (
         demand.at["demand", "amount"]
@@ -379,7 +378,7 @@ def run(scenario="scenarios/test-scenario"):
     summary.name = "Energy (in TWh)"
     summary = summary.to_frame()
     summary.index.name = "Unit"
-    summary = summary.divide(1e6) * dt 
+    summary = summary.divide(1e6) * dt
     summary.to_csv(os.path.join(rdir, "summary.csv"))
 
     cost.to_csv(os.path.join(rdir, "cost.csv"))
