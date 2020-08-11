@@ -16,7 +16,7 @@ def hourly_plot(name, color_dict, lines=[], supply=[], demand=[]):
     # create plot
     layout = go.Layout(
         barmode="stack",
-        title="Hourly supply and demand in for scenario {}".format(name),
+        title="Hourly supply and demand for {}".format(name),
         yaxis=dict(
             title="Energy in MWh",
             titlefont=dict(size=16, color="rgb(107, 107, 107)"),
@@ -93,7 +93,7 @@ def create_plots(rdir, config):
         phs = pd.DataFrame(index=demand.index)
     offline.plot(
         hourly_plot(
-            name="test",
+            name=rdir.split("/")[1],
             color_dict=color_dict,
             supply=supply,
             lines=demand["demand"].to_frame(),
