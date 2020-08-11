@@ -374,6 +374,7 @@ def run(scenario="scenarios/test-scenario"):
 
     emissions.to_csv(os.path.join(rdir, "emissions.csv"))
 
+    demand_results = demand_results.rename(columns={"phs": "phs-in"})
     summary = pd.concat([supply_results.sum(), demand_results.sum()])
     summary.name = "Energy (in TWh)"
     summary = summary.to_frame()

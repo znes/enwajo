@@ -102,4 +102,25 @@ def create_plots(rdir, config):
         filename=os.path.join(plots, "hourly-dispatch.html"),
         auto_open=False,
     )
+
+    # pie chart for supply 
+    supply = pd.read_csv(os.path.join(rdir, "supply.csv"), index_col=[0])
+    summary = supply.sum() / 1e6
+    summary.name = "Energy"
+    ax = summary.plot(kind="pie", subplots=True, colors=[color_dict.get(c, "black") for c in summary.index])
+    plt.title(rdir.split("/")[1])
+    fig = ax[0].get_figure()
+    fig.savefig(os.path.join(rdir, "plots", "summary.pdf"))
+
     return plots
+
+if __name__ == "__main__":
+    import sys
+    import toml
+
+    if len(sys.argv) < 2:
+        print("ERROR: Please provide results directory.")
+    else:
+        with open(os.path.join(sys.argv[1], "config.toml")) as config_data:
+            config = toml.load(config_data)
+        create_plots(os.path.join(sys.argv[1], "output"), config)
