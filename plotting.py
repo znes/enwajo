@@ -112,26 +112,19 @@ def create_plots(rdir, config):
     ax = summary.plot(
         kind="pie",
         colors=[color_dict.get(c, "black") for c in summary.index],
-        title=rdir.split("/")[1],
-    )
-    plt.savefig(
-        os.path.join(rdir, "plots", "supply-share.pdf"), bbox_inches="tight",
-    )
+        title=rdir.split("/")[1])
+    plt.savefig(os.path.join(rdir, "plots", "supply-share.pdf"), bbox_inches="tight")
     plt.close()
 
-    bardata = pd.concat([demand.sum() * -1, supply.sum()], sort=False).divide(
-        1e6
-    )
+    bardata = pd.concat([demand.sum() * -1, supply.sum()], sort=False).divide(1e6)
     ax = bardata.plot(kind="barh", title=rdir.split("/")[1])
     ax.set_ylabel("Technologies")
     ax.set_xlabel("Energy in TWh")
-    plt.savefig(
-        os.path.join(rdir, "plots", "summary-barplot.pdf"), bbox_inches="tight"
-    )
+    plt.savefig(os.path.join(rdir, "plots", "summary-barplot.pdf"), bbox_inches="tight")
     #
 
-    return plots
 
+    return plots
 
 if __name__ == "__main__":
     import sys
