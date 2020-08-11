@@ -279,11 +279,10 @@ def run(scenario="scenarios/test-scenario"):
         else:
             return (
                 m.e[t, s]
-                == m.e[t - 1, s] * (1 - storage.at[s, "loss"])
+                == m.e[t - 1 * dt, s] * (1 - storage.at[s, "loss"])
                 + storage.at[s, "eta_in"] * m.s_in[t, s] * dt
                 - m.s_out[t, s] / storage.at[s, "eta_out"] * dt
             )
-
     m.storage_balance = Constraint(m.TIMESTEPS, m.STOR, rule=storage_balance)
 
     if config["model"]["debug"]:
@@ -342,8 +341,8 @@ def run(scenario="scenarios/test-scenario"):
                 )
     # add shortage and excess
     aux_df = pd.Series(results_data["aux"]).unstack()
-    supply_results["shortage"] = aux_df["shortage"]
-    demand_results["excess"] = aux_df["excess"]
+    supply_results["shortage"] = aux_df["shortage"] * dt
+    demand_results["excess"] = aux_df["excess"] * dt
 
     demand_results["demand"] = (
         demand.at["demand", "amount"]
@@ -380,7 +379,7 @@ def run(scenario="scenarios/test-scenario"):
     summary.name = "Energy (in TWh)"
     summary = summary.to_frame()
     summary.index.name = "Unit"
-    summary = summary.divide(1e6)
+    summary = summary.divide(1e6) * dt 
     summary.to_csv(os.path.join(rdir, "summary.csv"))
 
     cost.to_csv(os.path.join(rdir, "cost.csv"))
