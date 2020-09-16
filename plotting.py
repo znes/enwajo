@@ -67,7 +67,7 @@ def hourly_plot(name, color_dict, lines=[], supply=[], demand=[]):
     return {"data": data, "layout": layout}
 
 
-def create_plots(rdir, config, supply, demand):
+def create_plots(rdir, config, supply, demand, scenario):
     """
     """
     if not os.path.exists(rdir):
@@ -82,14 +82,13 @@ def create_plots(rdir, config, supply, demand):
 
     if not os.path.exists(plots):
         os.makedirs(plots)
-
     if "phs" in demand.columns:
         phs = demand["phs"].to_frame()
     else:
         phs = pd.DataFrame(index=demand.index)
     offline.plot(
         hourly_plot(
-            name=rdir.split("/")[1],
+            name=scenario,
             color_dict=color_dict,
             supply=supply,
             lines=demand["demand"].to_frame(),
@@ -106,12 +105,12 @@ def create_plots(rdir, config, supply, demand):
     ax = summary.plot(
         kind="pie",
         colors=[color_dict.get(c, "black") for c in summary.index],
-        title=rdir.split("/")[1])
+        title=scenario)
     plt.savefig(os.path.join(rdir, "plots", "supply-share.pdf"), bbox_inches="tight")
     plt.close()
 
     bardata = pd.concat([demand.sum() * -1, supply.sum()], sort=False).divide(1e6)
-    ax = bardata.plot(kind="barh", title=rdir.split("/")[1])
+    ax = bardata.plot(kind="barh", title=scenario)
     ax.set_ylabel("Technologies")
     ax.set_xlabel("Energy in TWh")
     plt.savefig(os.path.join(rdir, "plots", "summary-barplot.pdf"), bbox_inches="tight")

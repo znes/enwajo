@@ -23,7 +23,7 @@ from pyomo.opt import SolverFactory
 from plotting import create_plots
 
 
-def run(scenario="scenarios/test-scenario"):
+def run(scenario=os.path.join("scenarios", "example1")):
     """
     """
     with open(os.path.join(scenario, "config.toml")) as config_data:
@@ -390,14 +390,23 @@ def run(scenario="scenarios/test-scenario"):
     print("Success! Stored results in `{}`".format(rdir))
 
     # generate auto  plots based on results
-    plots_dir = create_plots(rdir, config, supply_results, demand_results)
+    plots_dir = create_plots(rdir, config, supply_results, demand_results, scenario)
     print("Success! Generated plots in {}".format(plots_dir))
 
 
 if __name__ == "__main__":
     import sys
+    import traceback
+    try:
+        if len(sys.argv) < 2:
+            run()
+        else:
+            run(sys.argv[1])
+        input("Press Enter to exit.")
+    except:
+        traceback.print_exc()
+        print("Oops, something went wrong.")
+        print("To get help: Post the whole output above in a new issue at:")
+        print("https://github.com/znes/enwajo/issues")
+        input("Then press Enter to exit.")
 
-    if len(sys.argv) < 2:
-        run()
-    else:
-        run(sys.argv[1])
