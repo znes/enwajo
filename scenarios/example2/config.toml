@@ -1,0 +1,58 @@
+title = "EnWaJo config file"
+description = ""
+name = "enwajo"
+
+[model]
+# solver options (if installed): "gurobi", "cplex", "glpk", "ipopt"
+solver = "cbc"
+# temporal resolution can be set with 1,2,3 (every x timestep is used)
+t_resolution = 1
+# start timestep
+t_start = 0
+# end timestep (8760 for a whole year)
+t_end = 24
+# if debug mode is on (write lp-file)
+debug = false
+# stream solver output to console
+tee = false
+# input data file(s)
+input = "input"
+# output files
+output = "output"
+
+[constraints]
+# binary constraints for minimal load of of units
+# NOTE: you need to set `p_min` for the units
+pmin = true
+# efficiency is based on function with partial load losses
+# requires p_min = true AND a,b coefficients for part load efficiecy modelling
+eta_partial = false
+
+[colors]
+# valid color names can be found at
+# https://matplotlib.org/3.1.0/gallery/color/named_colors.html
+solar-pv = "lightyellow"
+wind-onshore = "skyblue"
+gas-ccgt = "lightgray"
+gas-gt = "dimgrey"
+oil-st = "darkgray"
+hydro-ror = "aqua"
+hydro-phs = "magenta"
+hydro = "aqua"
+phs = "magenta"
+Aqaba1 = "darkgray"
+Aqaba2 = "darkgray"
+Risha = "gray"
+Rehab = "gray"
+RehabCC = "lightgray"
+Amman-East= "lightgray"
+Samra1 = "lightgray"
+Samra2 = "lightgray"
+pv = "lightyellow"
+wind ="skyblue"
+Samra3 = "lightgray"
+Qatranah = "lightgray"
+IPP3 = "brown"
+IPP4 =  "brown"
+Samra4 ="lightgray"
+Zarqa-ACWA = "lightgray"
