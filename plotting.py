@@ -67,7 +67,7 @@ def hourly_plot(name, color_dict, lines=[], supply=[], demand=[]):
     return {"data": data, "layout": layout}
 
 
-def create_plots(rdir, config):
+def create_plots(rdir, config, supply, demand):
     """
     """
     if not os.path.exists(rdir):
@@ -82,10 +82,6 @@ def create_plots(rdir, config):
 
     if not os.path.exists(plots):
         os.makedirs(plots)
-
-    supply = pd.read_csv(os.path.join(rdir, "supply.csv"), index_col=[0])
-
-    demand = pd.read_csv(os.path.join(rdir, "demand.csv"), index_col=[0])
 
     if "phs" in demand.columns:
         phs = demand["phs"].to_frame()
@@ -104,8 +100,6 @@ def create_plots(rdir, config):
     )
 
     # pie chart for supply
-    supply = pd.read_csv(os.path.join(rdir, "supply.csv"), index_col=[0])
-    demand = pd.read_csv(os.path.join(rdir, "demand.csv"), index_col=[0])
     summary = supply.sum() / 1e6
     summary.name = "Energy"
 

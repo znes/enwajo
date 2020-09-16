@@ -341,7 +341,7 @@ def run(scenario="scenarios/test-scenario"):
     # add shortage and excess
     aux_df = pd.Series(results_data["aux"]).unstack()
     supply_results["shortage"] = aux_df["shortage"]
-    demand_results["excess"] = aux_df["excess"] 
+    demand_results["excess"] = aux_df["excess"]
 
     demand_results["demand"] = (
         demand.at["demand", "amount"]
@@ -364,15 +364,6 @@ def run(scenario="scenarios/test-scenario"):
         filename=os.path.join(rdir, "model-stats.json"), format="json"
     )
 
-    filling_levels.to_csv(os.path.join(rdir, "filling-level.csv"))
-
-    supply_results.to_csv(os.path.join(rdir, "supply.csv"))
-
-    fuel_results.to_csv(os.path.join(rdir, "fuel-consumption"))
-
-    demand_results.to_csv(os.path.join(rdir, "demand.csv"))
-
-    emissions.to_csv(os.path.join(rdir, "emissions.csv"))
 
     demand_results = demand_results.rename(columns={"phs": "phs-in"})
     summary = pd.concat([supply_results.sum(), demand_results.sum()])
@@ -380,13 +371,26 @@ def run(scenario="scenarios/test-scenario"):
     summary = summary.to_frame()
     summary.index.name = "Unit"
     summary = summary.divide(1e6) * dt
-    summary.to_csv(os.path.join(rdir, "summary.csv"))
 
-    cost.to_csv(os.path.join(rdir, "cost.csv"))
+    # store results in excel file
+    writer = pd.ExcelWriter(os.path.join(rdir, 'output.xlsx'))
+
+    summary.to_excel(writer, 'summary', merge_cells=False)
+    cost.to_excel(writer, 'cost', merge_cells=False)
+    emissions.to_excel(writer, 'emissions', merge_cells=False)
+    supply_results.to_excel(writer, 'supply', merge_cells=False)
+    demand_results.to_excel(writer, 'demand', merge_cells=False)
+    filling_levels.to_excel(writer, 'filling_levels', merge_cells=False)
+    fuel_results.to_excel(writer, 'fuel_consumption', merge_cells=False)
+
+    writer.save()
+
+
+
     print("Success! Stored results in `{}`".format(rdir))
 
     # generate auto  plots based on results
-    plots_dir = create_plots(rdir, config)
+    plots_dir = create_plots(rdir, config, supply_results, demand_results)
     print("Success! Generated plots in {}".format(plots_dir))
 
 
