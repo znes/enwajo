@@ -100,11 +100,13 @@ def create_plots(rdir, config, supply, demand, scenario):
 
     # pie chart for supply
     summary = supply.sum() / 1e6
-    summary.name = "Energy"
+    summary.name = ""
+    summary = summary.divide(summary.sum())
 
     ax = summary.plot(
         kind="pie",
         colors=[color_dict.get(c, "black") for c in summary.index],
+        labels=[k + " ({}%)".format(round((v * 100),1)) for k,v in summary.iteritems()],
         title=scenario)
     plt.savefig(os.path.join(rdir, "plots", "supply-share.pdf"), bbox_inches="tight")
     plt.close()
