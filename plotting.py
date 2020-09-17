@@ -107,12 +107,13 @@ def create_plots(rdir, config, supply, demand, scenario):
         kind="pie",
         colors=[color_dict.get(c, "black") for c in summary.index],
         labels=[k + " ({}%)".format(round((v * 100),1)) for k,v in summary.iteritems()],
-        title=scenario)
+        title="Scenario: " + scenario.split("/")[-1])
+    plt.tight_layout()
     plt.savefig(os.path.join(rdir, "plots", "supply-share.pdf"), bbox_inches="tight")
     plt.close()
 
     bardata = pd.concat([demand.sum() * -1, supply.sum()], sort=False).divide(1e6)
-    ax = bardata.plot(kind="barh", title=scenario)
+    ax = bardata.plot(kind="barh", title="Scenario: " + scenario.split("/")[-1])
     ax.set_ylabel("Technologies")
     ax.set_xlabel("Energy in TWh")
     plt.savefig(os.path.join(rdir, "plots", "summary-barplot.pdf"), bbox_inches="tight")
