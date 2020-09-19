@@ -9,6 +9,7 @@ try:
     scenario = filedialog.askdirectory(title='Please select scenario folder')
     root.destroy()
     run(scenario)
+    input("Please press Enter to exit.")
 except:
     traceback.print_exc()
     print("Oops, something went wrong.")
