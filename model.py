@@ -185,6 +185,9 @@ def run(scenario=os.path.join("scenarios", "example1")):
         return emissions
 
     m.emissions = Expression(m.CONV, rule=emissions)
+    import pdb
+
+    pdb.set_trace()
 
     def opex(m, u):
         """ Expression to collect operational expenditures used in objective
@@ -206,7 +209,14 @@ def run(scenario=os.path.join("scenarios", "example1")):
             )
         if u in m.RENEW:
             opex = (
-                sum(m.p[t, u] * renewable.at[u, "vom"] for t in m.TIMESTEPS)
+                sum(
+                    m.p[t, u]
+                    * (
+                        renewable.at[u, "vom"]
+                        + carrier.at[units.at[u, "carrier"], "cost"]
+                    )
+                    for t in m.TIMESTEPS
+                )
                 * dt
             )
 
@@ -282,6 +292,7 @@ def run(scenario=os.path.join("scenarios", "example1")):
                 + storage.at[s, "eta_in"] * m.s_in[t, s] * dt
                 - m.s_out[t, s] / storage.at[s, "eta_out"] * dt
             )
+
     m.storage_balance = Constraint(m.TIMESTEPS, m.STOR, rule=storage_balance)
 
     if config["model"]["debug"]:
@@ -364,7 +375,6 @@ def run(scenario=os.path.join("scenarios", "example1")):
         filename=os.path.join(rdir, "model-stats.json"), format="json"
     )
 
-
     demand_results = demand_results.rename(columns={"phs": "phs-in"})
     summary = pd.concat([supply_results.sum(), demand_results.sum()])
     summary.name = "Energy (in TWh)"
@@ -373,30 +383,31 @@ def run(scenario=os.path.join("scenarios", "example1")):
     summary = summary.divide(1e6) * dt
 
     # store results in excel file
-    writer = pd.ExcelWriter(os.path.join(rdir, 'output.xlsx'))
+    writer = pd.ExcelWriter(os.path.join(rdir, "output.xlsx"))
 
-    summary.to_excel(writer, 'summary', merge_cells=False)
-    cost.to_excel(writer, 'cost', merge_cells=False)
-    emissions.to_excel(writer, 'emissions', merge_cells=False)
-    supply_results.to_excel(writer, 'supply', merge_cells=False)
-    demand_results.to_excel(writer, 'demand', merge_cells=False)
-    filling_levels.to_excel(writer, 'filling_levels', merge_cells=False)
-    fuel_results.to_excel(writer, 'fuel_consumption', merge_cells=False)
+    summary.to_excel(writer, "summary", merge_cells=False)
+    cost.to_excel(writer, "cost", merge_cells=False)
+    emissions.to_excel(writer, "emissions", merge_cells=False)
+    supply_results.to_excel(writer, "supply", merge_cells=False)
+    demand_results.to_excel(writer, "demand", merge_cells=False)
+    filling_levels.to_excel(writer, "filling_levels", merge_cells=False)
+    fuel_results.to_excel(writer, "fuel_consumption", merge_cells=False)
 
     writer.save()
-
-
 
     print("Success! Stored results in `{}`".format(rdir))
 
     # generate auto  plots based on results
-    plots_dir = create_plots(rdir, config, supply_results, demand_results, scenario)
+    plots_dir = create_plots(
+        rdir, config, supply_results, demand_results, scenario
+    )
     print("Success! Generated plots in {}".format(plots_dir))
 
 
 if __name__ == "__main__":
     import sys
     import traceback
+
     try:
         if len(sys.argv) < 2:
             run()
@@ -409,4 +420,3 @@ if __name__ == "__main__":
         print("To get help: Post the whole output above in a new issue at:")
         print("https://github.com/znes/enwajo/issues")
         input("Then press Enter to exit.")
-
