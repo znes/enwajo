@@ -185,9 +185,6 @@ def run(scenario=os.path.join("scenarios", "example1")):
         return emissions
 
     m.emissions = Expression(m.CONV, rule=emissions)
-    import pdb
-
-    pdb.set_trace()
 
     def opex(m, u):
         """ Expression to collect operational expenditures used in objective
