@@ -1,6 +1,9 @@
 
 # enwajo - Energy Water Jordan Model
 
+For a more detailed instruction on the installation and usage, see the
+manual in the docs folder.
+
 ## Installation
 
 ### Windows
