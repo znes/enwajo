@@ -43,6 +43,13 @@ units are consistent. For example use:
 * MWh (energy related values like the demand)
 * $/MWh (carrier or variable cost).
 
+## CBC Solver
+
+The windows CBC solver included as cbc.exe file is part of the COIN OR project (https://projects.coin-or.org/Cbc) and was originally downloaded from:
+https://ampl.com/products/solvers/open-source/#cbc
+
+It is licensed under the Eclipse Public License v1.0. See the related license file in the repository.
+
 ## Cite as
 
 Hilpert, S. & Wingenbach, C. & Dettner, F. (2020). EnWaJo - Energy Water Model Jordan
